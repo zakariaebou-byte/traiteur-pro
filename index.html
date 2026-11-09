@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Traiteur Pro - Z-Brd Dev</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,Arial;background:#fff8ec;color:#1a1a1a}
+header{position:sticky;top:0;background:#111;color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;z-index:10}
+.logo{font-weight:900;color:#f5c542}.zbrd{background:#f5c542;color:#111;padding:6px 10px;border-radius:10px;font-weight:800;font-size:13px}
+main{max-width:900px;margin:auto;padding:16px;padding-bottom:90px}.card{background:#fff;border:1px solid #eee;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 4px 16px rgba(0,0,0,.05)}
+h1{font-size:26px;margin:6px 0}h2{margin:6px 0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opt{border:2px solid #eee;border-radius:14px;padding:14px;text-align:center;cursor:pointer;background:#fff}.opt.sel{border-color:#f5c542;background:#fff7d6}
+.plat{display:flex;justify-content:space-between;gap:10px;align-items:center;border-bottom:1px dashed #eee;padding:10px 0}
+button{border:0;border-radius:12px;padding:13px 16px;font-weight:800;cursor:pointer;min-height:46px} .gold{background:#f5c542}.dark{background:#111;color:#fff}.green{background:#25D366}.ghost{background:#eee}
+input,select,textarea{width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;margin:6px 0} .row{display:flex;gap:10px} .row>*{flex:1}
+.nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #eee;padding:10px;display:flex;gap:10px;max-width:900px;margin:auto}.nav button{flex:1}
+.badge{display:inline-block;background:#e8ffe8;padding:6px 10px;border-radius:20px;font-size:12px}.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:20px;z-index:99;display:none}
+footer{text-align:center;color:#888;font-size:13px;padding:20px} .hidden{display:none} .err{color:red;font-size:12px}
+@media(max-width:600px){.grid{grid-template-columns:1fr 1fr}.row{flex-direction:column}}
+</style></head>
+<body>
+<header><div class="logo">🍽️ Traiteur Pro <span id="hName"></span></div><div class="zbrd" onclick="toast('Z-Brd Dev - Groupe Développeur')">Z-B • Z-Brd Dev</div></header>
+<main>
+<div><span class="badge">✅ Sauvegardé automatiquement • <span id="savedAt"></span></span><h1>Votre événement, notre excellence</h1><p>Commandez en 3 étapes simples.</p>
+<div style="display:flex;gap:8px"><div class="card" style="flex:1;text-align:center" id="s1">1. Événement</div><div class="card" style="flex:1;text-align:center" id="s2">2. Menu</div><div class="card" style="flex:1;text-align:center" id="s3">3. Infos & Devis</div></div></div>
+
+<div id="step1" class="card"><h2>1. Votre Événement</h2><div class="grid" id="events"></div>
+<label>Date</label><input type="date" id="date"><label>Ville / Lieu</label><input id="ville" placeholder="Ex: Casablanca"><label>Nombre d'invités</label><input type="number" id="invites" value="100" min="20"><p id="err1" class="err"></p></div>
+
+<div id="step2" class="card hidden"><h2>2. Votre Menu</h2><div id="menu"></div><h3>Panier : <span id="total">0</span> DH • <span id="count">0</span> articles</h3><button class="ghost" onclick="vider()">Vider panier</button></div>
+
+<div id="step3" class="card hidden"><h2>3. Vos Infos & Devis</h2>
+<input id="nom" placeholder="Nom complet *"><input id="tel" placeholder="Téléphone * 06..."><input id="wa" placeholder="WhatsApp"><input id="email" placeholder="Email"><textarea id="msg" placeholder="Message / Remarques"></textarea><p id="err3" class="err"></p>
+<button class="green" onclick="envoyer()">✅ ENVOYER LA COMMANDE</button> <button class="gold" onclick="whatsapp()">💬 Envoyer sur WhatsApp</button>
+<div id="devis" class="card hidden"></div>
+<button class="ghost" onclick="copyDevis()">📋 Copier le devis</button></div>
+
+<div class="card"><h2>🧑‍🍳 Espace Traiteur - Mes Infos</h2><p>Remplissez vos infos, elles s'appliquent partout + devis + QR.</p>
+<input id="tNom" placeholder="Nom du traiteur"><input id="tTel" placeholder="Téléphone Pro"><input id="tWa" placeholder="WhatsApp Pro"><input id="tEmail" placeholder="Email Pro"><input id="tVille" placeholder="Ville / Adresse">
+<button class="gold" onclick="saveTraiteur()">💾 SAUVEGARDER MES INFOS</button>
+<div style="text-align:center;margin-top:12px"><img id="qr" width="140"><p>QR Code WhatsApp</p><button class="ghost" onclick="dlQR()">⬇️ Télécharger QR</button></div></div>
+
+<div class="card"><h2>📦 Mes Commandes Sauvegardées</h2><div id="hist"></div><button class="ghost" onclick="exporter()">⬇️ Exporter JSON</button></div>
+</main>
+<div class="nav"><button class="ghost" onclick="prev()">⬅ RETOUR</button><button class="gold" onclick="next()">SUIVANT ➡</button></div>
+<div class="toast" id="toast"></div>
+<footer><b>Cette application a été créée par le groupe développeur Z-Brd Dev</b><br>© 2026 Z-Brd Dev - Tous droits réservés<br><span id="fInfo"></span></footer>
+<script>
+let state=JSON.parse(localStorage.getItem('traiteur_pro')||'{}');
+let traiteur=state.traiteur||{nom:'Traiteur Al Amal',tel:'0600000000',wa:'0600000000',email:'contact@traiteur.ma',ville:'Casablanca'};
+let panier=state.panier||{}; let step=state.step||1; let evt=state.evt||'Mariage';
+const plats=[['Tajine Poulet',120,'🍗'],['Couscous Royal',130,'🍲'],['Pastilla Poulet',140,'🥧'],['Méchoui Agneau',180,'🍖'],['Grillades Mixtes',110,'🔥'],['Salade Marocaine',50,'🥗'],['Dessert Oriental',60,'🍰'],['Jus / Boissons',30,'🥤']];
+function toast(m){let t=document.getElementById('toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',2500)}
+function save(){localStorage.setItem('traiteur_pro',JSON.stringify({traiteur,panier,step,evt,date:date.value,ville:ville.value,invites:invites.value,nom:nom.value,tel:tel.value}));document.getElementById('savedAt').textContent=new Date().toLocaleTimeString();}
+function renderEvents(){let ev=['Mariage','Anniversaire','Fiançailles','Baptême','Entreprise','Autre'];document.getElementById('events').innerHTML=ev.map(e=>`<div class="opt ${e===evt?'sel':''}" onclick="choisir('${e}')">${e}</div>`).join('')}
+function choisir(e){evt=e;save();renderEvents();toast('Khtariti : '+e)}
+function renderMenu(){document.getElementById('menu').innerHTML=plats.map((p,i)=>`<div class="plat"><div><b>${p[2]} ${p[0]}</b><br>${p[1]} DH / personne</div><div><button onclick="chg(${i},-1)">-</button> <b>${panier[i]||0}</b> <button onclick="chg(${i},1)">+</button></div></div>`).join('');let tot=0,c=0;for(let k in panier){tot+=panier[k]*plats[k][1];c+=panier[k]}document.getElementById('total').textContent=tot;document.getElementById('count').textContent=c}
+function chg(i,d){panier[i]=Math.max(0,(panier[i]||0)+d);if(!panier[i])delete panier[i];save();renderMenu();toast('Panier mis à jour ✅')}
+function vider(){panier={};save();renderMenu();toast('Panier vidé')}
+function show(){[1,2,3].forEach(n=>document.getElementById('step'+n).classList.toggle('hidden',n!==step));[1,2,3].forEach(n=>document.getElementById('s'+n).style.background=n===step?'#f5c542':'#fff');window.scrollTo({top:0,behavior:'smooth'})}
+function next(){if(step===1){if(!date.value||!ville.value){document.getElementById('err1').textContent='3emer date o ville 3afak';toast('3emer date o ville');return}}if(step===2&&Object.keys(panier).length===0){toast('Khtar chi plat 3afak');return}step=Math.min(3,step+1);save();show()}
+function prev(){step=Math.max(1,step-1);save();show()}
+function saveTraiteur(){traiteur={nom:tNom.value||traiteur.nom,tel:tTel.value||traiteur.tel,wa:tWa.value||traiteur.wa,email:tEmail.value||traiteur.email,ville:tVille.value||traiteur.ville};save();apply();toast('Tsauvegarda b naja7 ✅')}
+function apply(){document.getElementById('hName').textContent=' - '+traiteur.nom;document.getElementById('fInfo').textContent=traiteur.nom+' • '+traiteur.tel+' • '+traiteur.email+' • '+traiteur.ville;document.getElementById('qr').src='https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://wa.me/212'+traiteur.wa.slice(1);tNom.value=traiteur.nom;tTel.value=traiteur.tel;tWa.value=traiteur.wa;tEmail.value=traiteur.email;tVille.value=traiteur.ville;renderHist()}
+function envoyer(){if(!nom.value||tel.value.length<10){document.getElementById('err3').textContent='Nom + téléphone 10 chiffres obligatoires';toast('Kmel les infos');return}let tot=document.getElementById('total').textContent;let num='CMD-'+Date.now().toString().slice(-6);let hist=JSON.parse(localStorage.getItem('traiteur_hist')||'[]');hist.unshift({num,date:new Date().toLocaleString(),nom:nom.value,evt,total:tot});localStorage.setItem('traiteur_hist',JSON.stringify(hist));let d=document.getElementById('devis');d.classList.remove('hidden');d.innerHTML=`<h3>DEVIS ${num}</h3><p><b>${traiteur.nom}</b><br>${traiteur.tel} • ${traiteur.email} • ${traiteur.ville}</p><p>Client: ${nom.value} • ${tel.value}<br>Événement: ${evt} • ${date.value} • ${ville.value} • ${invites.value} invités</p><p>Total: <b>${tot} DH</b></p><p>Merci pour votre confiance !</p>`;renderHist();toast('Commande envoyée ✅ '+num);save()}
+function whatsapp(){let tot=document.getElementById('total').textContent;let txt=`Salam ${traiteur.nom}, bghit ndir commande: ${evt}, ${date.value}, ${invites.value} invités, Total ${tot} DH, Smiya: ${nom.value}`;window.open('https://wa.me/212'+traiteur.wa.slice(1)+'?text='+encodeURIComponent(txt));toast('WhatsApp ouvert ✅')}
+function copyDevis(){let t=document.getElementById('devis').innerText;if(!t){toast('Dir commande lwl');return}navigator.clipboard.writeText(t);toast('Tcopia ✅')}
+function dlQR(){let a=document.createElement('a');a.href=document.getElementById('qr').src;a.download='qr-traiteur.png';a.click();toast('QR téléchargé ✅')}
+function renderHist(){let h=JSON.parse(localStorage.getItem('traiteur_hist')||'[]');document.getElementById('hist').innerHTML=h.length?h.map((x,i)=>`<div style="border-bottom:1px solid #eee;padding:8px 0"><b>${x.num}</b> - ${x.nom} - ${x.evt} - ${x.total} DH <button class="ghost" onclick="delHist(${i})">Supprimer</button></div>`).join(''):'Aucune commande pour le moment.'}
+function delHist(i){let h=JSON.parse(localStorage.getItem('traiteur_hist')||'[]');h.splice(i,1);localStorage.setItem('traiteur_hist',JSON.stringify(h));renderHist();toast('Supprimée ✅')}
+function exporter(){let b=new Blob([localStorage.getItem('traiteur_pro')||'{}'],{type:'application/json'});let a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='traiteur-pro.json';a.click();toast('Exporté ✅')}
+date.value=state.date||'';ville.value=state.ville||'';invites.value=state.invites||100;nom.value=state.nom||'';tel.value=state.tel||'';
+renderEvents();renderMenu();apply();show();save();
+</script></body></html>
